@@ -1,0 +1,11 @@
+{
+  "name": "slack-later",
+  "private": true,
+  "scripts": {
+    "lint": "prettier --check '**/*'",
+    "lint:fix": "prettier --write '**/*'"
+  },
+  "devDependencies": {
+    "prettier": "^2.1.1"
+  }
+}

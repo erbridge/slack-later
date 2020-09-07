@@ -25,7 +25,14 @@ const parseFutureDate = (referenceDate: Date, text: string) => {
   const parsedDates = naturalDateParser.parse(text, referenceDate, {
     forwardDate: true,
   });
-  return parsedDates[parsedDates.length - 1];
+
+  const parsedDate = parsedDates[parsedDates.length - 1];
+
+  if (parsedDate?.end) {
+    return;
+  }
+
+  return parsedDate;
 };
 
 const respondWithError = async (
@@ -169,7 +176,7 @@ export const later: Middleware<SlackCommandMiddlewareArgs> = async ({
     return;
   }
 
-  const postAt = (parsedDate.end || parsedDate.start).date();
+  const postAt = parsedDate.date();
 
   const what = command.text
     .replace(parsedDate.text, "")

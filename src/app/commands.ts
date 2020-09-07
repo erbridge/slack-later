@@ -1,7 +1,14 @@
 import { Middleware, RespondFn, SlackCommandMiddlewareArgs } from "@slack/bolt";
 import { ErrorCode as WebAPIErrorCode, WebClient } from "@slack/web-api";
 import * as chrono from "chrono-node";
-import * as moment from "moment-timezone";
+import dayjs, { Dayjs } from "dayjs";
+import calendar from "dayjs/plugin/calendar";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(calendar);
+dayjs.extend(timezone);
+dayjs.extend(utc);
 
 const naturalDateParser = new chrono.Chrono(
   chrono.en.createCasualConfiguration(true)
@@ -11,28 +18,32 @@ const fetchUserLocalization = async (
   client: WebClient,
   { user }: { user: string }
 ) => {
-  const response = await client.users.info({
-    user,
-    include_locale: true,
-  });
+  const response = await client.users.info({ user });
 
-  const { locale, tz } = response.user as { locale: string; tz: string };
+  const { tz } = response.user as { locale: string; tz: string };
 
-  return { locale, tz };
+  return { tz };
 };
 
-const parseFutureDate = (referenceDate: Date, text: string) => {
+const parseFutureDate = (referenceMoment: dayjs.Dayjs, text: string) => {
+  const utcOffset = referenceMoment.utcOffset();
+  const referenceDate = referenceMoment.add(utcOffset, "minute").toDate();
+
   const parsedDates = naturalDateParser.parse(text, referenceDate, {
     forwardDate: true,
   });
 
-  const parsedDate = parsedDates[parsedDates.length - 1];
+  const parsedDateResult = parsedDates[parsedDates.length - 1];
 
-  if (parsedDate?.end) {
+  if (parsedDateResult?.end) {
     return;
   }
 
-  return parsedDate;
+  const parsedDateComponents = parsedDateResult.start;
+  const parsedDate = parsedDateComponents.date();
+  const date = dayjs.utc(parsedDate).subtract(utcOffset, "minute");
+
+  return { text: parsedDateResult.text, date };
 };
 
 const respondWithError = async (
@@ -95,14 +106,14 @@ const scheduleMessage = async (
     channel: string;
     sender: string;
     text: string;
-    postAt: Date;
+    postAt: Dayjs;
     postAtHumanReadable: string;
   }
 ) => {
   try {
     await client.chat.scheduleMessage({
       channel,
-      post_at: Math.floor(postAt.getTime() / 1000).toString(),
+      post_at: postAt.unix().toString(),
       text,
       blocks: [
         {
@@ -161,12 +172,12 @@ export const later: Middleware<SlackCommandMiddlewareArgs> = async ({
 }) => {
   await ack();
 
-  const { locale, tz } = await fetchUserLocalization(client, {
+  const { tz } = await fetchUserLocalization(client, {
     user: command.user_id,
   });
 
-  const now = moment().tz(tz);
-  const parsedDate = parseFutureDate(now.toDate(), command.text);
+  const now = dayjs().tz(tz);
+  const parsedDate = parseFutureDate(now, command.text);
 
   if (!parsedDate) {
     await respondWithError(respond, {
@@ -176,16 +187,26 @@ export const later: Middleware<SlackCommandMiddlewareArgs> = async ({
     return;
   }
 
-  const postAt = parsedDate.date();
-
   const what = command.text
     .replace(parsedDate.text, "")
     .trim()
     .replace(/^['"\p{Pi}]|['"\p{Pf}]$/gu, "");
-  const when = moment(postAt)
-    .tz(tz)
-    .locale(locale)
-    .calendar(now, { sameElse: "dddd DD MMMM YYYY [at] LT" });
+
+  if (!what) {
+    await respondWithError(respond, {
+      error: `\`${command.command} ${command.text}\` didn't contain a message to schedule.`,
+    });
+
+    return;
+  }
+
+  const postAt = parsedDate.date;
+  const when = postAt.tz(tz).calendar(now, {
+    sameDay: "[Today at] HH:mm",
+    nextDay: "[Tomorrow at] HH:mm",
+    nextWeek: "dddd [at] HH:mm",
+    sameElse: "dddd DD MMMM YYYY [at] HH:mm",
+  });
 
   await scheduleMessage(client, respond, {
     channel: command.channel_id,

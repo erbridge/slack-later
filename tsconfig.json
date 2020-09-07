@@ -4,6 +4,7 @@
     "outDir": "./build",
     "moduleResolution": "node",
     "target": "ES5",
+    "esModuleInterop": true,
     "sourceMap": true,
 
     "allowSyntheticDefaultImports": true,

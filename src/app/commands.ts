@@ -29,7 +29,23 @@ const parseFutureDate = (referenceMoment: dayjs.Dayjs, text: string) => {
   const utcOffset = referenceMoment.utcOffset();
   const referenceDate = referenceMoment.add(utcOffset, "minute").toDate();
 
-  const parsedDates = naturalDateParser.parse(text, referenceDate, {
+  const dateParser = naturalDateParser.clone();
+
+  dateParser.refiners.push({
+    refine(_context, results) {
+      for (const { start } of results) {
+        if (start.isOnlyDate()) {
+          start.imply("hour", 9);
+          start.imply("minute", 0);
+          start.imply("second", 0);
+        }
+      }
+
+      return results;
+    },
+  });
+
+  const parsedDates = dateParser.parse(text, referenceDate, {
     forwardDate: true,
   });
 

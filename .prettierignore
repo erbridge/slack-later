@@ -1,4 +1,5 @@
 .*
 !/.prettierrc
 
+/build/
 /LICENCE

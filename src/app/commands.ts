@@ -39,6 +39,14 @@ const parseFutureDate = (referenceMoment: dayjs.Dayjs, text: string) => {
           start.imply("minute", 0);
           start.imply("second", 0);
         }
+
+        const certainComponents = start.getCertainComponents();
+        const hour = start.get("hour");
+
+        if (!certainComponents.includes("meridiem") && hour && hour < 8) {
+          start.assign("hour", hour + 12);
+          start.imply("meridiem", chrono.Meridiem.PM);
+        }
       }
 
       return results;

@@ -10,7 +10,7 @@
   "dependencies": {
     "@slack/bolt": "^2.3.0",
     "chrono-node": "^2.1.8",
-    "dayjs": "^1.8.35",
+    "dayjs": "^1.10.3",
     "dotenv": "^8.2.0",
     "typescript": "^4.0.2"
   },

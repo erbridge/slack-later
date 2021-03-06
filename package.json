@@ -8,7 +8,7 @@
     "lint:fix": "prettier --write '**/*'"
   },
   "dependencies": {
-    "@slack/bolt": "^3.0.0",
+    "@slack/bolt": "^3.2.0",
     "chrono-node": "^2.2.1",
     "dayjs": "^1.10.3",
     "dotenv": "^8.2.0",

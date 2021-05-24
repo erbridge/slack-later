@@ -11,7 +11,7 @@
     "@slack/bolt": "^3.3.0",
     "chrono-node": "^2.2.5",
     "dayjs": "^1.10.4",
-    "dotenv": "^8.2.0",
+    "dotenv": "^10.0.0",
     "typescript": "^4.2.3"
   },
   "devDependencies": {
